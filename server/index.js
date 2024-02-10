@@ -3,7 +3,7 @@ const express=require('express')
 const mysql=require('mysql2') 
 
 const cors=require("cors") 
-const bodyParser = require('body-parser');
+
 const jwt = require('jsonwebtoken');
 const bcrypt=require('bcrypt')
 
@@ -11,18 +11,31 @@ const app=express()
 
 app.use(cors());
 
-
+require('dotenv').config()
 
 app.use(express.urlencoded({extended: false}))
 app.use(express.json())
 
 
-const connection=mysql.createConnection({
-    host:'localhost',
-    user:'root',
-    password:'',
-    database:'youtubedb'
+const pool = mysql.createPool({
+    host: process.env.DB_HOST, 
+    user: process.env.DB_USERNAME, 
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DBNAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+pool.getConnection((err, conn) => {
+    if(err) console.log(err)
+    console.log("Connected successfully")
 })
+
+app.get("/",(req,res)=>{
+    res.send("Hi Sai")
+})
+
 
 
 
@@ -34,7 +47,7 @@ app.post('/register', async(req, res) => {
     const checkUserSql = `SELECT * FROM reusers WHERE username =?   LIMIT 1`;
    const value=[username]
   
-    connection.query(checkUserSql,value, (err, results) => {
+    pool.query(checkUserSql,value, (err, results) => {
       if (err) {
         console.error('Error checking user existence:', err);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -47,7 +60,7 @@ app.post('/register', async(req, res) => {
           const insertUserSql = 'INSERT INTO reusers (username, email, password) VALUES (?, ?,?)';
           const insertUserValues = [username, email, hashedPassword];
   
-          connection.query(insertUserSql, insertUserValues, (err, results) => {
+          pool.query(insertUserSql, insertUserValues, (err, results) => {
             if (err) {
               console.error('Error inserting user:', err);
               res.status(500).json({ error: 'Internal Server Error' });
@@ -67,7 +80,7 @@ app.post('/register', async(req, res) => {
     const query = 'SELECT * FROM reusers WHERE username = ? ';
   const values = [username]
 
-  connection.query(query, values, (error, results) => {
+  pool.query(query, values, (error, results) => {
     if (error) {
       console.error('Error executing query:', error);
     
